@@ -1,0 +1,69 @@
+import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
+const CreateEventPage = () => {
+  const [formData, setFormData] = useState({
+    title: "",
+    date: "",
+    imageUrl: "",
+  });
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  const { title, date, imageUrl } = formData;
+
+  const onChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const config = {
+        headers: {
+          "Content-Type": "application/json",
+          "x-auth-token": token,
+        },
+      };
+      const res = await axios.post("/api/events", formData, config);
+      navigate(`/event/${res.data._id}`); // Navigate to the new event's page
+    } catch (err) {
+      console.error(err.response.data);
+      alert("Event creation failed. Please try again.");
+    }
+  };
+
+  return (
+    <div className="form-container">
+      <h2>Create a New Event</h2>
+      <form onSubmit={onSubmit}>
+        <input
+          type="text"
+          placeholder="Event Title"
+          name="title"
+          value={title}
+          onChange={onChange}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Event Date"
+          name="date"
+          value={date}
+          onChange={onChange}
+        />
+        <input
+          type="text"
+          placeholder="Image URL for the event cover"
+          name="imageUrl"
+          value={imageUrl}
+          onChange={onChange}
+          required
+        />
+        <button type="submit">Create Event</button>
+      </form>
+    </div>
+  );
+};
+
+export default CreateEventPage;

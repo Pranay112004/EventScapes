@@ -1,0 +1,16 @@
+:root {
+  --bg-dark: #121212;
+  --font-family: "Poppins", sans-serif; /* Add Poppins from Google Fonts if you like */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-dark);
+  font-family: var(--font-family), system-ui, sans-serif;
+  color: #eaeaea;
+}
