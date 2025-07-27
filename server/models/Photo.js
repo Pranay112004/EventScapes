@@ -19,6 +19,11 @@ const PhotoSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  mediaType: {
+    type: String,
+    enum: ["image", "video"],
+    default: "image",
+  },
   createdAt: {
     type: Date,
     default: Date.now,

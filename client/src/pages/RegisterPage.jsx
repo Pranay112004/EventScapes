@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast"; // 1. Import toast
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -18,12 +19,14 @@ const RegisterPage = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5001/api/users/register", formData);
-      alert("Registration successful! Please log in.");
-      navigate("/"); // Redirect to homepage after registration
+      await axios.post("/api/users/register", formData);
+      // 2. Use toast instead of alert
+      toast.success("Registration successful! Please log in.");
+      navigate("/login");
     } catch (err) {
       console.error(err.response.data);
-      alert("Registration failed. Email may already be in use.");
+      // 3. Use toast instead of alert
+      toast.error("Registration failed. Email may already be in use.");
     }
   };
 

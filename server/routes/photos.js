@@ -13,35 +13,39 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Configure Multer
+// Configure Multer with media type detection
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: "eventscapes",
-    format: async (req, file) => "jpg",
-    public_id: (req, file) => "photo-" + Date.now(),
+  params: (req, file) => {
+    // Check file type to determine resource_type and folder
+    const isVideo = file.mimetype.startsWith("video");
+    return {
+      folder: "eventscapes",
+      resource_type: isVideo ? "video" : "image",
+      public_id: (isVideo ? "video-" : "photo-") + Date.now(),
+    };
   },
 });
 const upload = multer({ storage: storage });
-
-// POST /api/photos/upload/:eventId - Upload a photo (Private)
 router.post(
   "/upload/:eventId",
   [auth, upload.single("image")],
   async (req, res) => {
     try {
+      const isVideo = req.file.mimetype.startsWith("video");
       const newPhoto = new Photo({
         event: req.params.eventId,
         user: req.user.id,
         imageUrl: req.file.path,
         caption: req.body.caption,
+        mediaType: isVideo ? "video" : "image",
       });
-
       let photo = await newPhoto.save();
-      // Find the photo again to populate the user info
-      photo = await Photo.findById(photo._id).populate("user", "name");
-
-      res.json(photo); // Now it sends the user's name with the response
+      photo = await Photo.findById(photo._id).populate(
+        "user",
+        "name avatarUrl"
+      );
+      res.json(photo);
     } catch (err) {
       console.error(err.message);
       res.status(500).send("Server Error");
@@ -53,7 +57,7 @@ router.post(
 router.get("/event/:eventId", async (req, res) => {
   try {
     const photos = await Photo.find({ event: req.params.eventId })
-      .populate("user", "name") // Added .populate() to include the user's name
+      .populate("user", "name avatarUrl")
       .sort({ createdAt: -1 });
     res.json(photos);
   } catch (err) {
@@ -63,13 +67,12 @@ router.get("/event/:eventId", async (req, res) => {
 });
 
 // DELETE /api/photos/:id - Delete a photo (Private)
-// --- Complete implementation for the delete route ---
 router.delete("/:id", auth, async (req, res) => {
   try {
     const photo = await Photo.findById(req.params.id);
 
     if (!photo) {
-      return res.status(404).json({ msg: "Photo not found" });
+      return res.status(404).json({ msg: "Media not found" });
     }
 
     // Check if the user owns the photo
@@ -77,23 +80,36 @@ router.delete("/:id", auth, async (req, res) => {
       return res.status(401).json({ msg: "User not authorized" });
     }
 
-    // Delete image from Cloudinary
+    // Delete media from Cloudinary
     const publicId = photo.imageUrl.split("/").pop().split(".")[0];
-    await cloudinary.uploader.destroy(`eventscapes/${publicId}`);
+    const resourceType = photo.mediaType === "video" ? "video" : "image";
+    await cloudinary.uploader.destroy(`eventscapes/${publicId}`, {
+      resource_type: resourceType,
+    });
 
     // Delete photo from database
     await Photo.findByIdAndDelete(req.params.id);
 
-    res.json({ msg: "Photo removed" });
+    res.json({ msg: "Media removed" });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");
   }
 });
-// --- ADD THIS NEW ROUTE ---
-// @route   GET /api/photos/user/me
-// @desc    Get all photos uploaded by the current user
-// @access  Private
+
+router.get("/user/:userId", async (req, res) => {
+  try {
+    const photos = await Photo.find({ user: req.params.userId }).sort({
+      createdAt: -1,
+    });
+    res.json(photos);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// GET /api/photos/user/me - Get all photos uploaded by the current user
 router.get("/user/me", auth, async (req, res) => {
   try {
     const photos = await Photo.find({ user: req.user.id }).sort({

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import PhotoUploadForm from "../components/PhotoUploadForm";
 import { jwtDecode } from "jwt-decode";
+import PhotoModal from "../components/PhotoModal";
+import toast from "react-hot-toast";
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -10,10 +12,10 @@ const EventDetailPage = () => {
   const [event, setEvent] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [error, setError] = useState(null);
 
-  // This useEffect now safely gets the current user's data
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -21,76 +23,160 @@ const EventDetailPage = () => {
         const decodedToken = jwtDecode(token);
         setCurrentUser(decodedToken.user);
       } catch (err) {
-        // If token is invalid, remove it and log the error
-        console.error("Invalid token:", err);
         localStorage.removeItem("token");
       }
     }
   }, []);
 
   useEffect(() => {
-    const fetchEventAndPhotos = async () => {
-      setLoading(true);
+    const fetchEventData = async () => {
       try {
-        const eventRes = await axios.get(`/api/events/${id}`);
+        setLoading(true);
+        const [eventRes, photosRes] = await Promise.all([
+          axios.get(`/api/events/${id}`),
+          axios.get(`/api/photos/event/${id}`)
+        ]);
+        
         setEvent(eventRes.data);
-        const photosRes = await axios.get(`/api/photos/event/${id}`);
         setPhotos(photosRes.data);
       } catch (err) {
-        setError("Could not load event details.");
-        console.error(err);
+        console.error('Error fetching event data:', err);
+        setError('Failed to load event details');
+        if (err.response?.status === 404) {
+          toast.error('Event not found');
+          navigate('/');
+        }
       } finally {
         setLoading(false);
       }
     };
-    fetchEventAndPhotos();
-  }, [id]);
+
+    if (id) {
+      fetchEventData();
+    }
+  }, [id, navigate]);
 
   const handlePhotoUploaded = (newPhoto) => {
-    setPhotos([newPhoto, ...photos]);
+    setPhotos(prev => [newPhoto, ...prev]);
+    toast.success('Photo uploaded successfully!');
   };
 
-  const handleDelete = async (photoId) => {
-    if (window.confirm("Are you sure you want to delete this photo?")) {
-      try {
-        const token = localStorage.getItem("token");
-        await axios.delete(`/api/photos/${photoId}`, {
-          headers: { "x-auth-token": token },
-        });
-        setPhotos(photos.filter((p) => p._id !== photoId));
-      } catch (err) {
-        alert("Could not delete photo.");
-      }
+  const handleDeletePhoto = async (photoId) => {
+    const token = localStorage.getItem('token');
+    if (!token || !window.confirm('Are you sure you want to delete this photo?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/photos/${photoId}`, {
+        headers: { 'x-auth-token': token }
+      });
+      setPhotos(prev => prev.filter(photo => photo._id !== photoId));
+      toast.success('Photo deleted successfully');
+      setSelectedPhoto(null);
+    } catch (err) {
+      console.error('Error deleting photo:', err);
+      toast.error('Failed to delete photo');
     }
   };
 
-  // (Your handleDeleteEvent function would go here if you add it)
+  const handleDeleteEvent = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
 
-  if (loading) return <p>Loading event...</p>;
-  if (error) return <p className="error-message">{error}</p>;
-  if (!event) return <p>Event not found.</p>;
+    try {
+      await axios.delete(`/api/events/${id}`, {
+        headers: { 'x-auth-token': token }
+      });
+      toast.success('Event deleted successfully');
+      navigate('/');
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      toast.error('Failed to delete event');
+    }
+  };
 
-  const isOwner = currentUser && currentUser.id === event.owner;
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading event details...</p>
+      </div>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <div className="error-container">
+        <div className="error-message">
+          <h3>Event Not Found</h3>
+          <p>{error || 'The event you are looking for does not exist.'}</p>
+          <Link to="/" className="button-primary">
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isOwner = currentUser && event.owner === currentUser.id;
 
   return (
-    <div className="event-detail-container">
-      {isOwner && (
-        <div className="owner-actions">
-          <Link to={`/event/${event._id}/edit`} className="button-edit">
-            Edit Event
-          </Link>
+    <div className="event-detail-page">
+      <div className="event-header">
+        <div className="event-image-container">
+          <img 
+            src={event.imageUrl || '/api/placeholder/800/400'} 
+            alt={event.title}
+            className="event-hero-image"
+          />
+          <div className="event-overlay">
+            <div className="event-info">
+              <h1 className="event-title">{event.title}</h1>
+              <p className="event-date">{formatDate(event.date)}</p>
+              {event.location && <p className="event-location">📍 {event.location}</p>}
+            </div>
+            {isOwner && (
+              <div className="event-actions">
+                <Link 
+                  to={`/event/${id}/edit`} 
+                  className="button-primary"
+                >
+                  Edit Event
+                </Link>
+                <button 
+                  onClick={handleDeleteEvent}
+                  className="button-danger"
+                >
+                  Delete Event
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {event.description && (
+        <div className="event-description">
+          <div className="form-container">
+            <h2>About This Event</h2>
+            <p>{event.description}</p>
+          </div>
         </div>
       )}
 
-      <h1>{event.title}</h1>
-      <p className="event-date">{event.date}</p>
-      <img
-        src={event.imageUrl}
-        alt={event.title}
-        className="event-detail-image"
-      />
-
-      {/* This conditional check will now work correctly */}
       {currentUser && (
         <PhotoUploadForm
           eventId={event._id}
@@ -99,38 +185,76 @@ const EventDetailPage = () => {
       )}
 
       <div className="photo-gallery">
-        <h2>Event Gallery</h2>
-        <div className="gallery-grid">
-          {photos.length > 0 ? (
-            photos.map((photo) => (
-              <div key={photo._id} className="photo-item">
-                <img
-                  src={photo.imageUrl}
-                  alt={photo.caption || "Event photo"}
-                />
+        <div className="section-header">
+          <h2>Event Gallery</h2>
+          <p>Share your memories from this amazing event</p>
+        </div>
+        
+        {photos.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-content">
+              <h3>No Photos Yet</h3>
+              <p>Be the first to share a moment from this event!</p>
+              {!currentUser && (
+                <Link to="/login" className="button-primary">
+                  Login to Upload Photos
+                </Link>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="gallery-grid">
+            {photos.map((photo) => (
+              <div
+                key={photo._id}
+                className="photo-item"
+                onClick={() => setSelectedPhoto(photo)}
+              >
+                {photo.mediaType === 'video' ? (
+                  <video 
+                    src={photo.imageUrl} 
+                    className="gallery-media"
+                    muted
+                  />
+                ) : (
+                  <img 
+                    src={photo.imageUrl} 
+                    alt={photo.caption || "Event photo"} 
+                    className="gallery-media"
+                    loading="lazy"
+                  />
+                )}
                 <div className="photo-overlay">
-                  {photo.caption && <p className="caption">{photo.caption}</p>}
-                  {photo.user && (
-                    <p className="uploader-name">by {photo.user.name}</p>
-                  )}
-                </div>
-                {currentUser &&
-                  photo.user &&
-                  currentUser.id === photo.user._id && (
-                    <button
-                      onClick={() => handleDelete(photo._id)}
-                      className="delete-btn"
+                  <div className="photo-info">
+                    <p className="photo-user">📸 {photo.user?.name || 'Anonymous'}</p>
+                    {photo.caption && <p className="photo-caption">{photo.caption}</p>}
+                  </div>
+                  {currentUser && currentUser.id === photo.user?._id && (
+                    <button 
+                      className="delete-photo-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePhoto(photo._id);
+                      }}
                     >
-                      &times;
+                      🗑️
                     </button>
                   )}
+                </div>
               </div>
-            ))
-          ) : (
-            <p>No photos have been uploaded to this event yet.</p>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {selectedPhoto && (
+        <PhotoModal
+          photo={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+          currentUser={currentUser}
+          onDelete={handleDeletePhoto}
+        />
+      )}
     </div>
   );
 };

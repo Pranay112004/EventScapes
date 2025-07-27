@@ -23,12 +23,102 @@ const storage = new CloudinaryStorage({
 });
 const upload = multer({ storage: storage });
 
+router.get("/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 router.post("/register", async (req, res) => {
-  // ... your register code
+  try {
+    const { name, email, password } = req.body;
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ msg: "User already exists" });
+    }
+
+    // Create new user instance
+    user = new User({
+      name,
+      email,
+      password,
+    });
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+
+    // Save user to database
+    await user.save();
+
+    // Create JWT payload
+    const payload = {
+      user: {
+        id: user.id,
+      },
+    };
+
+    // Sign JWT token
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: "5h" },
+      (err, token) => {
+        if (err) throw err;
+        res.json({ token });
+      }
+    );
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server error");
+  }
 });
 
 router.post("/login", async (req, res) => {
-  // ... your login code
+  const { email, password } = req.body;
+  try {
+    // Check for user
+    let user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ msg: "Invalid Credentials" });
+    }
+
+    // Match password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ msg: "Invalid Credentials" });
+    }
+
+    // Create payload for JWT
+    const payload = {
+      user: {
+        id: user.id,
+      },
+    };
+
+    // Sign token
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: "5h" },
+      (err, token) => {
+        if (err) throw err;
+        res.json({ token });
+      }
+    );
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server error");
+  }
 });
 
 router.get("/me", auth, async (req, res) => {
@@ -42,11 +132,49 @@ router.get("/me", auth, async (req, res) => {
 });
 
 router.put("/me", auth, async (req, res) => {
-  // ... your update name code
+  try {
+    const { name } = req.body;
+
+    // Find user and update
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { name },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
 });
 
 router.post("/avatar", [auth, upload.single("avatar")], async (req, res) => {
-  // ... your update avatar code
+  try {
+    if (!req.file) {
+      return res.status(400).json({ msg: "No file uploaded" });
+    }
+
+    // Update user's avatar URL
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { avatarUrl: req.file.path },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    res.json({ avatarUrl: user.avatarUrl });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
 });
 
 module.exports = router;

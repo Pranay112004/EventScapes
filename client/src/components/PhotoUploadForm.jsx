@@ -47,9 +47,17 @@ const PhotoUploadForm = ({ eventId, onPhotoUploaded }) => {
 
   return (
     <div className="form-container">
-      <h3>Upload a Photo to This Event</h3>
+      <h3>Upload Media to This Event</h3>
+      <p style={{ color: '#b3b3b3', fontSize: '0.9rem', marginBottom: '1rem' }}>
+        Support images (JPG, PNG, GIF) and videos (MP4, MOV, AVI)
+      </p>
       <form onSubmit={handleSubmit}>
-        <input type="file" onChange={handleFileChange} required />
+        <input
+          type="file"
+          onChange={handleFileChange}
+          accept="image/*,video/*"
+          required
+        />
         <input
           type="text"
           placeholder="Optional caption"
@@ -57,7 +65,7 @@ const PhotoUploadForm = ({ eventId, onPhotoUploaded }) => {
           onChange={(e) => setCaption(e.target.value)}
         />
         <button type="submit" disabled={uploading}>
-          {uploading ? "Uploading..." : "Upload"}
+          {uploading ? "Uploading..." : "Upload Media"}
         </button>
       </form>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast"; // Keep this import
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -13,19 +14,21 @@ const LoginPage = () => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    const toastId = toast.loading("Logging in..."); // Show loading toast
+
     try {
-      const res = await axios.post(
-        "http://localhost:5001/api/users/login",
-        formData
-      );
-      // Store the token in localStorage to keep the user logged in
+      const res = await axios.post("/api/users/login", formData);
       localStorage.setItem("token", res.data.token);
-      alert("Login successful!");
-      navigate("/"); // Redirect to homepage
-      window.location.reload(); // Refresh to update the app state
+
+      toast.success("Login successful!", { id: toastId }); // Show success toast
+
+      navigate("/");
+      window.location.reload();
     } catch (err) {
       console.error(err.response.data);
-      alert("Login failed. Please check your credentials.");
+      toast.error("Login failed. Please check your credentials.", {
+        id: toastId,
+      }); // Show error toast
     }
   };
 

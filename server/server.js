@@ -39,6 +39,8 @@ app.use(
       "http://localhost:5173",
       "http://localhost:5174",
       "http://localhost:3000",
+      // Add your Render frontend URL here after deployment
+      process.env.FRONTEND_URL || "https://your-frontend-app.onrender.com",
     ],
     credentials: true,
   })
@@ -67,7 +69,6 @@ try {
   process.exit(1);
 }
 
-// --- NEW ---
 try {
   console.log("Loading photos routes...");
   app.use("/api/photos", require("./routes/photos"));
@@ -76,7 +77,17 @@ try {
   console.error("❌ Error loading photos routes:", error.message);
   process.exit(1);
 }
-// --- END NEW ---
+
+// --- ADD THIS BLOCK ---
+try {
+  console.log("Loading comments routes...");
+  app.use("/api/comments", require("./routes/comments"));
+  console.log("✅ Comments routes loaded successfully");
+} catch (error) {
+  console.error("❌ Error loading comments routes:", error.message);
+  process.exit(1);
+}
+// --- END ADD ---
 
 // --- STATIC ASSETS ---
 const clientPath = path.join(__dirname, "../client/dist");
