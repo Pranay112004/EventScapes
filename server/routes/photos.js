@@ -19,14 +19,26 @@ const storage = new CloudinaryStorage({
   params: (req, file) => {
     // Check file type to determine resource_type and folder
     const isVideo = file.mimetype.startsWith("video");
+    const isHEIC = file.originalname.toLowerCase().endsWith('.heic') || file.originalname.toLowerCase().endsWith('.heif');
+    
     return {
       folder: "eventscapes",
       resource_type: isVideo ? "video" : "image",
       public_id: (isVideo ? "video-" : "photo-") + Date.now(),
+      // Auto-convert HEIC to JPG for better compatibility
+      format: isHEIC ? "jpg" : undefined,
     };
   },
 });
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit per file
+    files: 20 // Maximum 20 files
+  }
+});
+
+// Single file upload route (for backward compatibility)
 router.post(
   "/upload/:eventId",
   [auth, upload.single("image")],
@@ -49,6 +61,55 @@ router.post(
     } catch (err) {
       console.error(err.message);
       res.status(500).send("Server Error");
+    }
+  }
+);
+
+// Multiple files upload route
+router.post(
+  "/upload-multiple/:eventId",
+  [auth, upload.array("images", 20)], // Accept up to 20 files
+  async (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ msg: "No files uploaded" });
+      }
+
+      const uploadedPhotos = [];
+      const captions = Array.isArray(req.body.captions) ? req.body.captions : [req.body.captions || ""];
+
+      // Process each file
+      for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i];
+        const isVideo = file.mimetype.startsWith("video");
+        
+        const newPhoto = new Photo({
+          event: req.params.eventId,
+          user: req.user.id,
+          imageUrl: file.path,
+          caption: captions[i] || `Uploaded ${i + 1}`, // Use individual caption or default
+          mediaType: isVideo ? "video" : "image",
+        });
+        
+        let photo = await newPhoto.save();
+        photo = await Photo.findById(photo._id).populate(
+          "user",
+          "name avatarUrl"
+        );
+        uploadedPhotos.push(photo);
+      }
+
+      res.json({
+        success: true,
+        count: uploadedPhotos.length,
+        photos: uploadedPhotos
+      });
+    } catch (err) {
+      console.error("Multiple upload error:", err.message);
+      res.status(500).json({ 
+        msg: "Server Error during multiple upload",
+        error: err.message 
+      });
     }
   }
 );

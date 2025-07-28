@@ -1,32 +1,36 @@
 .event-card {
   /* This tells the card not to grow or shrink */
   flex: 0 0 auto;
-  /* Set a fixed width for each card */
-  width: 280px;
-
+  /* Set a responsive width */
+  width: clamp(280px, 32vw, 320px);
+  
   position: relative;
   display: block;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg);
   aspect-ratio: 4 / 5;
-  transition: transform 0.4s ease;
-  background-color: #1e1e1e;
+  transition: var(--transition-medium);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  text-decoration: none;
 }
 
 .event-card:hover {
-  transform: scale(1.03);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--accent-light);
 }
 
 .event-card img {
-  /* This is the fix: change width and height to 100% */
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s ease;
+  transition: var(--transition-medium);
 }
 
 .event-card:hover img {
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
 .card-overlay {
@@ -34,17 +38,66 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 3rem 1.5rem 1.5rem;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  padding: clamp(2rem, 4vw, 3rem) clamp(1rem, 3vw, 1.5rem) clamp(1rem, 2vw, 1.5rem);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.4), transparent);
   color: white;
+  backdrop-filter: blur(4px);
 }
 
 .card-overlay h3 {
-  font-size: 1.5rem;
-  margin-bottom: 0.25rem;
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: white;
 }
 
-.card-overlay p {
-  font-size: 0.9rem;
-  color: #b3b3b3;
+.event-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.event-date,
+.event-location {
+  font-size: clamp(0.8rem, 2vw, 0.9rem);
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.event-date::before {
+  content: "📅";
+  font-size: 0.75rem;
+}
+
+.event-location::before {
+  content: "📍";
+  font-size: 0.75rem;
+}
+
+/* Responsive adjustments for EventCard */
+@media (max-width: 480px) {
+  .event-card {
+    width: clamp(250px, 45vw, 280px);
+  }
+  
+  .card-overlay {
+    padding: 1.5rem 1rem 1rem;
+  }
+  
+  .card-overlay h3 {
+    font-size: 1.125rem;
+  }
+  
+  .event-date,
+  .event-location {
+    font-size: 0.8rem;
+  }
 }

@@ -16,14 +16,23 @@ import PublicProfilePage from "./components/PublicProfilePage";
 import PrivateRoute from "./components/PrivateRoute";
 
 // CSS Import
-import "./App.jsx";
+import "./index.css";
 
 function App() {
   const token = localStorage.getItem("token");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     window.location.href = "/";
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -41,27 +50,49 @@ function App() {
 
         <header>
           <nav>
-            <Link to="/" className="logo">
+            <Link to="/" className="logo" onClick={closeMobileMenu}>
               EventScapes
             </Link>
-            <div className="nav-links">
+            
+            {/* Mobile Menu Button */}
+            <button 
+              className="mobile-menu-toggle"
+              onClick={toggleMobileMenu}
+              aria-label="Toggle mobile menu"
+            >
+              <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}>
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </button>
+            
+            <div className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
               {token ? (
                 <>
-                  <Link to="/profile">My Profile</Link>
-                  <Link to="/create-event">Create Event</Link>
-                  <button onClick={handleLogout} className="button-primary">
+                  <Link to="/profile" onClick={closeMobileMenu}>My Profile</Link>
+                  <Link to="/create-event" onClick={closeMobileMenu}>Create Event</Link>
+                  <button onClick={() => { handleLogout(); closeMobileMenu(); }} className="button-primary">
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link to="/register">Register</Link>
-                  <Link to="/login" className="button-primary">
+                  <Link to="/register" onClick={closeMobileMenu}>Register</Link>
+                  <Link to="/login" className="button-primary" onClick={closeMobileMenu}>
                     Login
                   </Link>
                 </>
               )}
             </div>
+            
+            {/* Mobile Menu Overlay */}
+            {isMobileMenuOpen && (
+              <div 
+                className="mobile-menu-overlay" 
+                onClick={closeMobileMenu}
+              ></div>
+            )}
           </nav>
         </header>
         <main>

@@ -5,13 +5,15 @@ import { useNavigate } from "react-router-dom";
 const CreateEventPage = () => {
   const [formData, setFormData] = useState({
     title: "",
+    description: "",
     date: "",
+    location: "",
     imageUrl: "",
   });
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  const { title, date, imageUrl } = formData;
+  const { title, description, date, location, imageUrl } = formData;
 
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,29 +39,50 @@ const CreateEventPage = () => {
     <div className="form-container">
       <h2>Create a New Event</h2>
       <form onSubmit={onSubmit}>
+        <div className="form-grid">
+          <input
+            type="text"
+            placeholder="Event Title"
+            name="title"
+            value={title}
+            onChange={onChange}
+            required
+          />
+          <input
+            type="datetime-local"
+            placeholder="Event Date & Time"
+            name="date"
+            value={date}
+            onChange={onChange}
+            required
+          />
+        </div>
+        
         <input
           type="text"
-          placeholder="Event Title"
-          name="title"
-          value={title}
+          placeholder="Event Location (Optional)"
+          name="location"
+          value={location}
           onChange={onChange}
-          required
         />
-        <input
-          type="text"
-          placeholder="Event Date"
-          name="date"
-          value={date}
+        
+        <textarea
+          placeholder="Event Description (Optional)"
+          name="description"
+          value={description}
           onChange={onChange}
+          rows="4"
         />
+        
         <input
-          type="text"
-          placeholder="Image URL for the event cover"
+          type="url"
+          placeholder="Event Cover Image URL"
           name="imageUrl"
           value={imageUrl}
           onChange={onChange}
           required
         />
+        
         <button type="submit">Create Event</button>
       </form>
     </div>

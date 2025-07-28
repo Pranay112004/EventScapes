@@ -23,19 +23,6 @@ const storage = new CloudinaryStorage({
 });
 const upload = multer({ storage: storage });
 
-router.get("/:id", async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id).select("-password");
-    if (!user) {
-      return res.status(404).json({ msg: "User not found" });
-    }
-    res.json(user);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
-  }
-});
-
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -171,6 +158,20 @@ router.post("/avatar", [auth, upload.single("avatar")], async (req, res) => {
     }
 
     res.json({ avatarUrl: user.avatarUrl });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Get user by ID (must be at the end to avoid conflicts with specific routes like /me)
+router.get("/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    res.json(user);
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");
