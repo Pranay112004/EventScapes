@@ -11,6 +11,7 @@ import CreateEventPage from "./pages/CreateEventPage";
 import EditEventPage from "./pages/EditEventPage";
 import ProfilePage from "./pages/ProfilePage";
 import PublicProfilePage from "./components/PublicProfilePage";
+import GroupDetailPage from "./pages/GroupDetailPage";
 
 // Component Imports
 import PrivateRoute from "./components/PrivateRoute";
@@ -102,6 +103,7 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/event/:id" element={<EventDetailPage />} />
+            <Route path="/groups/:id" element={<GroupDetailPage />} />
             <Route path="/users/:id" element={<PublicProfilePage />} />
 
             {/* Private Routes */}

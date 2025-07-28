@@ -87,6 +87,15 @@ try {
   console.error("❌ Error loading comments routes:", error.message);
   process.exit(1);
 }
+
+try {
+  console.log("Loading groups routes...");
+  app.use("/api/groups", require("./routes/groups"));
+  console.log("✅ Groups routes loaded successfully");
+} catch (error) {
+  console.error("❌ Error loading groups routes:", error.message);
+  process.exit(1);
+}
 // --- END ADD ---
 
 // --- STATIC ASSETS ---

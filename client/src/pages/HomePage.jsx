@@ -1,25 +1,46 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import EventCard from "../components/EventCard";
+import GroupCard from "../components/GroupCard";
+import CreateGroupForm from "../components/CreateGroupForm";
 
 const HomePage = () => {
   const [events, setEvents] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await axios.get("/api/events");
-        setEvents(data);
+        // Fetch events
+        const eventsResponse = await axios.get("/api/events");
+        setEvents(eventsResponse.data);
+        
+        // Fetch groups
+        const headers = token ? { "x-auth-token": token } : {};
+        const groupsResponse = await axios.get("/api/groups", { headers });
+        setGroups(groupsResponse.data);
       } catch (err) {
-        setError("Failed to load events.");
+        setError("Failed to load data.");
       } finally {
         setLoading(false);
       }
     };
-    fetchEvents();
-  }, []);
+    fetchData();
+  }, [token]);
+  
+  const handleGroupCreated = (newGroup) => {
+    setGroups(prev => [newGroup, ...prev]);
+    setShowCreateGroup(false);
+  };
+  
+  const handleCancelCreate = () => {
+    setShowCreateGroup(false);
+  };
 
   if (loading) {
     return (
@@ -60,6 +81,49 @@ const HomePage = () => {
         </div>
       </div>
 
+      {/* Groups Section */}
+      <div className="groups-section">
+        <div className="section-header">
+          <h2>Community Groups</h2>
+          <p>Join groups to share photos, videos and connect with like-minded people.</p>
+          {token && (
+            <button 
+              onClick={() => setShowCreateGroup(true)}
+              className="button-primary create-group-btn"
+            >
+              Create Group
+            </button>
+          )}
+        </div>
+        
+        {groups.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-content">
+              <h3>No Groups Yet</h3>
+              <p>Create the first community group and start sharing memories!</p>
+              {token ? (
+                <button 
+                  onClick={() => setShowCreateGroup(true)}
+                  className="button-primary"
+                >
+                  Create Your First Group
+                </button>
+              ) : (
+                <a href="/login" className="button-primary">
+                  Login to Create Groups
+                </a>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="groups-grid">
+            {groups.map((group) => (
+              <GroupCard key={group._id} group={group} />
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="events-section">
         <div className="section-header">
           <h2>Featured Events</h2>
@@ -84,6 +148,14 @@ const HomePage = () => {
           </div>
         )}
       </div>
+      
+      {/* Create Group Modal */}
+      {showCreateGroup && (
+        <CreateGroupForm
+          onGroupCreated={handleGroupCreated}
+          onCancel={handleCancelCreate}
+        />
+      )}
     </div>
   );
 };
